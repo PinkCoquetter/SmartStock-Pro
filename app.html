@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <meta name="description" content="SmartStock Pro — Dashboard Sistem Manajemen Inventaris"/>
+  <title>SmartStock Pro — Dashboard</title>
+  <link rel="stylesheet" href="css/style.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%233b82f6'/><text x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='bold' font-size='12'>SS</text></svg>"/>
+</head>
+<body>
+<div class="app">
+  <!-- ========== SIDEBAR ========== -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <img src="assets/logo.svg" alt="Logo"/>
+      <div class="sidebar-brand"><h2>SmartStock Pro</h2><small>v1.0 — PT Maju Bersama</small></div>
+    </div>
+    <nav class="sidebar-nav" id="sidebar-nav">
+      <div class="nav-label">Utama</div>
+      <div class="nav-item active" data-view="dashboard" onclick="App.go('dashboard')">
+        <span class="nav-icon">📊</span> Dashboard
+      </div>
+      <div class="nav-label">Inventaris</div>
+      <div class="nav-item" data-view="products" onclick="App.go('products')">
+        <span class="nav-icon">📦</span> Produk
+      </div>
+      <div class="nav-item" data-view="categories" onclick="App.go('categories')">
+        <span class="nav-icon">🏷️</span> Kategori
+      </div>
+      <div class="nav-item" data-view="warehouses" onclick="App.go('warehouses')">
+        <span class="nav-icon">🏭</span> Gudang
+      </div>
+      <div class="nav-item" data-view="suppliers" onclick="App.go('suppliers')">
+        <span class="nav-icon">🚛</span> Supplier
+      </div>
+      <div class="nav-item" data-view="transactions" onclick="App.go('transactions')">
+        <span class="nav-icon">🔄</span> Transaksi
+      </div>
+      <div class="nav-label">Operasional</div>
+      <div class="nav-item" data-view="transfer" onclick="App.go('transfer')">
+        <span class="nav-icon">🔀</span> Transfer Gudang
+      </div>
+      <div class="nav-item" data-view="import" onclick="App.go('import')">
+        <span class="nav-icon">📥</span> Import Data
+      </div>
+      <div class="nav-label">Sistem</div>
+      <div class="nav-item" data-view="notifications" onclick="App.go('notifications')">
+        <span class="nav-icon">🔔</span> Notifikasi <span class="nav-badge" id="notif-count" style="display:none">0</span>
+      </div>
+      <div class="nav-item" data-view="monitoring" onclick="App.go('monitoring')">
+        <span class="nav-icon">📡</span> Monitoring
+      </div>
+      <div class="nav-item" data-view="errorlog" onclick="App.go('errorlog')">
+        <span class="nav-icon">🐛</span> Error Log
+      </div>
+      <div class="nav-item" data-view="audit" onclick="App.go('audit')">
+        <span class="nav-icon">📋</span> Audit Log
+      </div>
+      <div class="nav-item" data-view="sql" onclick="App.go('sql')">
+        <span class="nav-icon">🗄️</span> SQL Console
+      </div>
+      <div class="nav-label">Laporan</div>
+      <div class="nav-item" data-view="reports" onclick="App.go('reports')">
+        <span class="nav-icon">📄</span> Export Laporan
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div id="session-info" style="margin-bottom:4px"></div>
+      <div>© 2025 PT Maju Bersama Digital</div>
+    </div>
+  </aside>
+
+  <!-- ========== MAIN ========== -->
+  <div class="main">
+    <!-- Top Header -->
+    <header class="top-header">
+      <div class="header-left">
+        <button class="menu-btn" onclick="App.toggleSidebar()">☰</button>
+        <div><div class="page-title" id="page-title">Dashboard</div>
+        <div class="page-breadcrumb" id="page-breadcrumb">SmartStock Pro / Dashboard</div></div>
+      </div>
+      <div class="header-right">
+        <div class="header-search">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="global-search" placeholder="Cari produk, gudang..." oninput="App.globalSearch(this.value)"/>
+        </div>
+        <button class="header-icon-btn" onclick="App.toggleTheme()" title="Toggle Tema">🌙</button>
+        <div style="position:relative">
+          <button class="header-icon-btn" onclick="App.toggleNotifDropdown()" title="Notifikasi" id="notif-btn">
+            🔔<span class="notif-badge" id="notif-header-badge" style="display:none">0</span>
+          </button>
+          <div class="notif-dropdown" id="notif-dropdown">
+            <div class="notif-dropdown-header"><h4>Notifikasi</h4>
+              <button class="btn btn-ghost btn-sm" onclick="App.clearNotifs()">Bersihkan</button></div>
+            <div id="notif-list"></div>
+          </div>
+        </div>
+        <div class="user-avatar" id="user-avatar" onclick="App.logout()" title="Logout">A</div>
+      </div>
+    </header>
+
+    <!-- ========== CONTENT AREA ========== -->
+    <main class="content">
+
+      <!-- VIEW: Dashboard -->
+      <section class="view active" id="view-dashboard">
+        <div class="stats-row" id="stats-row"></div>
+        <div class="grid-2 mb-lg">
+          <div class="card"><div class="card-header"><h3 class="card-title">Tren Stok Masuk/Keluar</h3></div>
+            <div class="card-body"><div class="chart-container"><canvas id="chart-trend"></canvas></div></div></div>
+          <div class="card"><div class="card-header"><h3 class="card-title">Stok per Gudang</h3></div>
+            <div class="card-body"><div class="chart-container"><canvas id="chart-warehouse"></canvas></div></div></div>
+        </div>
+        <div class="grid-2">
+          <div class="card"><div class="card-header"><h3 class="card-title">Distribusi Kategori</h3></div>
+            <div class="card-body"><div class="chart-container"><canvas id="chart-category"></canvas></div></div></div>
+          <div class="card"><div class="card-header"><h3 class="card-title">Lokasi Gudang</h3></div>
+            <div class="card-body no-pad"><div class="map-container" id="warehouse-map"></div></div></div>
+        </div>
+      </section>
+
+      <!-- VIEW: Produk -->
+      <section class="view" id="view-products">
+        <div class="table-controls">
+          <div class="table-controls-left">
+            <select class="filter-select" id="filter-product-cat" onchange="Inventory.applyFilters()"><option value="">Semua Kategori</option></select>
+            <select class="filter-select" id="filter-product-wh" onchange="Inventory.applyFilters()"><option value="">Semua Gudang</option></select>
+            <select class="filter-select" id="filter-product-stock" onchange="Inventory.applyFilters()">
+              <option value="">Semua Status Stok</option><option value="in">Stok Cukup</option>
+              <option value="low">Stok Rendah</option><option value="out">Habis</option></select>
+          </div>
+          <div class="flex gap-sm">
+            <button class="btn btn-secondary" onclick="Inventory.showGallery()">🖼️ Galeri</button>
+            <button class="btn btn-primary" onclick="Inventory.openAddProduct()">➕ Tambah Produk</button>
+          </div>
+        </div>
+        <div class="card"><div class="card-body no-pad">
+          <div class="table-wrap"><table class="data-table" id="products-table"><thead><tr>
+            <th onclick="Inventory.sort('sku')">SKU <span class="sort-icon">↕</span></th>
+            <th onclick="Inventory.sort('name')">Produk <span class="sort-icon">↕</span></th>
+            <th onclick="Inventory.sort('category')">Kategori <span class="sort-icon">↕</span></th>
+            <th onclick="Inventory.sort('warehouse')">Gudang <span class="sort-icon">↕</span></th>
+            <th onclick="Inventory.sort('stock')">Stok <span class="sort-icon">↕</span></th>
+            <th onclick="Inventory.sort('price')">Harga <span class="sort-icon">↕</span></th>
+            <th>Status</th><th>Aksi</th>
+          </tr></thead><tbody id="products-tbody"></tbody></table></div>
+          <div class="pagination" id="products-pagination"></div>
+        </div></div>
+        <div class="empty-state" id="products-empty" style="display:none"><div class="empty-icon">📦</div>
+          <h3>Belum Ada Produk</h3><p>Tambahkan produk pertama Anda</p>
+          <button class="btn btn-primary" onclick="Inventory.openAddProduct()">➕ Tambah Produk</button></div>
+      </section>
+
+      <!-- VIEW: Kategori -->
+      <section class="view" id="view-categories">
+        <div class="table-controls"><div></div>
+          <button class="btn btn-primary" onclick="Inventory.openAddCategory()">➕ Tambah Kategori</button></div>
+        <div class="card"><div class="card-body no-pad">
+          <div class="table-wrap"><table class="data-table"><thead><tr>
+            <th>ID</th><th>Nama Kategori</th><th>Deskripsi</th><th>Jumlah Produk</th><th>Aksi</th>
+          </tr></thead><tbody id="categories-tbody"></tbody></table></div>
+        </div></div>
+      </section>
+
+      <!-- VIEW: Gudang -->
+      <section class="view" id="view-warehouses">
+        <div class="table-controls"><div></div>
+          <button class="btn btn-primary" onclick="Inventory.openAddWarehouse()">➕ Tambah Gudang</button></div>
+        <div class="card"><div class="card-body no-pad">
+          <div class="table-wrap"><table class="data-table"><thead><tr>
+            <th>ID</th><th>Nama Gudang</th><th>Kota</th><th>Kapasitas</th><th>Terisi</th><th>Status</th><th>Aksi</th>
+          </tr></thead><tbody id="warehouses-tbody"></tbody></table></div>
+        </div></div>
+      </section>
+
+      <!-- VIEW: Supplier -->
+      <section class="view" id="view-suppliers">
+        <div class="table-controls"><div></div>
+          <button class="btn btn-primary" onclick="Inventory.openAddSupplier()">➕ Tambah Supplier</button></div>
+        <div class="card"><div class="card-body no-pad">
+          <div class="table-wrap"><table class="data-table"><thead><tr>
+            <th>ID</th><th>Nama Supplier</th><th>Kontak</th><th>Email</th><th>Kota</th><th>Aksi</th>
+          </tr></thead><tbody id="suppliers-tbody"></tbody></table></div>
+        </div></div>
+      </section>
+
+      <!-- VIEW: Transaksi -->
+      <section class="view" id="view-transactions">
+        <div class="tabs" id="tx-tabs">
+          <div class="tab active" onclick="Inventory.switchTxTab('in')">📥 Barang Masuk</div>
+          <div class="tab" onclick="Inventory.switchTxTab('out')">📤 Barang Keluar</div>
+        </div>
+        <div class="table-controls"><div class="table-controls-left">
+          <select class="filter-select" id="filter-tx-wh" onchange="Inventory.filterTx()"><option value="">Semua Gudang</option></select>
+        </div>
+          <button class="btn btn-primary" id="btn-add-tx" onclick="Inventory.openAddTransaction()">➕ Tambah Transaksi</button></div>
+        <div class="card"><div class="card-body no-pad">
+          <div class="table-wrap"><table class="data-table"><thead><tr>
+            <th>ID</th><th>Tanggal</th><th>Produk</th><th>Gudang</th><th>Qty</th><th>Tipe</th><th>Keterangan</th>
+          </tr></thead><tbody id="transactions-tbody"></tbody></table></div>
+        </div></div>
+      </section>
+
+      <!-- VIEW: Transfer Gudang -->
+      <section class="view" id="view-transfer">
+        <div class="card"><div class="card-header"><h3 class="card-title">🔀 Transfer Barang Antar Gudang</h3></div>
+        <div class="card-body">
+          <div class="form-grid">
+            <div class="form-group"><label class="form-label">Gudang Asal <span class="req">*</span></label>
+              <select class="form-select" id="transfer-from"></select></div>
+            <div class="form-group"><label class="form-label">Gudang Tujuan <span class="req">*</span></label>
+              <select class="form-select" id="transfer-to"></select></div>
+            <div class="form-group"><label class="form-label">Produk <span class="req">*</span></label>
+              <select class="form-select" id="transfer-product"></select></div>
+            <div class="form-group"><label class="form-label">Jumlah <span class="req">*</span></label>
+              <input class="form-input" type="number" id="transfer-qty" min="1" placeholder="Jumlah unit"/></div>
+          </div>
+          <div class="transfer-flow" id="transfer-flow" style="display:none">
+            <div class="transfer-warehouse" id="transfer-src-info"><h4>—</h4><p>Stok: —</p></div>
+            <div class="transfer-arrow">➡️</div>
+            <div class="transfer-warehouse" id="transfer-dst-info"><h4>—</h4><p>Stok: —</p></div>
+          </div>
+          <div class="progress-bar" id="transfer-progress" style="display:none"><div class="progress-fill" id="transfer-progress-fill"></div></div>
+          <div class="form-actions"><button class="btn btn-primary" onclick="Transfer.execute()">🔀 Proses Transfer</button></div>
+        </div></div>
+        <div class="card mt-lg"><div class="card-header"><h3 class="card-title">Riwayat Transfer</h3></div>
+        <div class="card-body no-pad"><div class="table-wrap"><table class="data-table"><thead><tr>
+          <th>ID</th><th>Tanggal</th><th>Dari</th><th>Ke</th><th>Produk</th><th>Qty</th><th>Status</th>
+        </tr></thead><tbody id="transfers-tbody"></tbody></table></div></div></div>
+      </section>
+
+      <!-- VIEW: Import Data -->
+      <section class="view" id="view-import">
+        <div class="card"><div class="card-header"><h3 class="card-title">📥 Batch Import Data Produk (CSV/Excel)</h3></div>
+        <div class="card-body">
+          <div class="gallery-upload" id="import-dropzone" onclick="document.getElementById('import-file').click()"
+               ondragover="event.preventDefault();this.style.borderColor='var(--primary)'"
+               ondragleave="this.style.borderColor=''" ondrop="Transfer.handleFileDrop(event)">
+            <div class="upload-icon">📁</div>
+            <div>Klik atau seret file CSV ke sini</div>
+            <div style="font-size:var(--fs-xs);color:var(--text-muted)">Format: SKU, Nama, Kategori, Gudang, Stok, Harga</div>
+          </div>
+          <input type="file" id="import-file" accept=".csv" style="display:none" onchange="Transfer.handleFileSelect(event)"/>
+          <div id="import-preview" style="display:none" class="mt-lg">
+            <h4 class="mb-sm">Preview Data Import</h4>
+            <div class="table-wrap"><table class="data-table"><thead><tr>
+              <th>SKU</th><th>Nama</th><th>Kategori</th><th>Gudang</th><th>Stok</th><th>Harga</th><th>Status</th>
+            </tr></thead><tbody id="import-tbody"></tbody></table></div>
+            <div class="progress-bar mt-md" id="import-progress"><div class="progress-fill" id="import-progress-fill"></div></div>
+            <div class="form-actions">
+              <button class="btn btn-secondary" onclick="Transfer.cancelImport()">Batal</button>
+              <button class="btn btn-primary" onclick="Transfer.processImport()">⚡ Proses Import (Paralel)</button>
+            </div>
+          </div>
+        </div></div>
+      </section>
+
+      <!-- VIEW: Notifikasi -->
+      <section class="view" id="view-notifications">
+        <div class="card"><div class="card-header"><h3 class="card-title">🔔 Semua Notifikasi</h3>
+          <button class="btn btn-ghost btn-sm" onclick="Notifications.clearAll()">Bersihkan Semua</button></div>
+        <div class="card-body" id="all-notifs-list"></div></div>
+      </section>
+
+      <!-- VIEW: Resource Monitoring -->
+      <section class="view" id="view-monitoring">
+        <div class="monitor-grid" id="monitor-grid"></div>
+        <div class="grid-2 mt-lg">
+          <div class="card"><div class="card-header"><h3 class="card-title">Response Time</h3></div>
+            <div class="card-body"><div class="chart-container"><canvas id="chart-response"></canvas></div></div></div>
+          <div class="card"><div class="card-header"><h3 class="card-title">Uptime History</h3></div>
+            <div class="card-body"><div class="chart-container"><canvas id="chart-uptime"></canvas></div></div></div>
+        </div>
+      </section>
+
+      <!-- VIEW: Error Log -->
+      <section class="view" id="view-errorlog">
+        <div class="table-controls"><div class="table-controls-left">
+          <select class="filter-select" id="filter-log-severity" onchange="Monitoring.filterLogs()">
+            <option value="">Semua Severity</option><option value="critical">Critical</option>
+            <option value="warning">Warning</option><option value="info">Info</option></select>
+        </div>
+          <button class="btn btn-danger btn-sm" onclick="Monitoring.simulateError()">⚡ Simulasi Error</button></div>
+        <div class="card"><div class="card-body no-pad">
+          <div class="table-wrap"><table class="data-table"><thead><tr>
+            <th>Timestamp</th><th>Severity</th><th>Module</th><th>Message</th><th>Stack Trace</th>
+          </tr></thead><tbody id="errorlog-tbody"></tbody></table></div>
+        </div></div>
+      </section>
+
+      <!-- VIEW: Audit Log -->
+      <section class="view" id="view-audit">
+        <div class="card"><div class="card-header"><h3 class="card-title">📋 Audit Log — Riwayat Aktivitas Pengguna</h3></div>
+        <div class="card-body"><div class="audit-timeline" id="audit-timeline"></div></div></div>
+      </section>
+
+      <!-- VIEW: SQL Console -->
+      <section class="view" id="view-sql">
+        <div class="card"><div class="card-header"><h3 class="card-title">🗄️ SQL Query Console (Simulasi)</h3></div>
+        <div class="card-body">
+          <div class="sql-console">
+            <textarea class="sql-editor" id="sql-editor" placeholder="-- Masukkan query SQL di sini...&#10;-- Contoh: SELECT * FROM products WHERE stock < 10&#10;-- Contoh: SELECT p.name, w.city, p.stock FROM products p JOIN warehouses w ON p.warehouse_id = w.id"></textarea>
+            <div class="sql-toolbar">
+              <button class="btn btn-primary btn-sm" onclick="App.executeSQL()">▶ Run Query</button>
+              <button class="btn btn-ghost btn-sm" onclick="document.getElementById('sql-editor').value=''">Clear</button>
+              <button class="btn btn-ghost btn-sm" onclick="App.loadSampleSQL()">📝 Contoh Query</button>
+            </div>
+          </div>
+          <div class="sql-result mt-md" id="sql-result" style="display:none"><pre id="sql-output"></pre></div>
+        </div></div>
+      </section>
+
+      <!-- VIEW: Export Laporan -->
+      <section class="view" id="view-reports">
+        <div class="grid-3">
+          <div class="card" style="cursor:pointer" onclick="Reports.exportPDF('inventory')">
+            <div class="card-body text-center" style="padding:var(--sp-xl)">
+              <div style="font-size:2.5rem;margin-bottom:var(--sp-md)">📊</div>
+              <h3 style="font-size:var(--fs-md);font-weight:var(--fw-bold);margin-bottom:var(--sp-xs)">Laporan Inventaris</h3>
+              <p style="font-size:var(--fs-sm);color:var(--text-secondary)">Export seluruh data stok ke PDF</p>
+              <button class="btn btn-primary btn-sm mt-md">📥 Download PDF</button>
+            </div>
+          </div>
+          <div class="card" style="cursor:pointer" onclick="Reports.exportPDF('transaction')">
+            <div class="card-body text-center" style="padding:var(--sp-xl)">
+              <div style="font-size:2.5rem;margin-bottom:var(--sp-md)">🔄</div>
+              <h3 style="font-size:var(--fs-md);font-weight:var(--fw-bold);margin-bottom:var(--sp-xs)">Laporan Transaksi</h3>
+              <p style="font-size:var(--fs-sm);color:var(--text-secondary)">Riwayat masuk/keluar barang</p>
+              <button class="btn btn-primary btn-sm mt-md">📥 Download PDF</button>
+            </div>
+          </div>
+          <div class="card" style="cursor:pointer" onclick="Reports.exportCSV()">
+            <div class="card-body text-center" style="padding:var(--sp-xl)">
+              <div style="font-size:2.5rem;margin-bottom:var(--sp-md)">📁</div>
+              <h3 style="font-size:var(--fs-md);font-weight:var(--fw-bold);margin-bottom:var(--sp-xs)">Export Data CSV</h3>
+              <p style="font-size:var(--fs-sm);color:var(--text-secondary)">Semua produk ke spreadsheet</p>
+              <button class="btn btn-success btn-sm mt-md">📥 Download CSV</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW: Galeri Produk -->
+      <section class="view" id="view-gallery">
+        <div class="table-controls"><div><button class="btn btn-ghost" onclick="App.go('products')">⬅ Kembali ke Produk</button></div>
+          <button class="btn btn-primary" onclick="Inventory.uploadImage()">📷 Upload Gambar</button></div>
+        <div class="gallery-grid" id="gallery-grid"></div>
+        <input type="file" id="gallery-upload-input" accept="image/*" style="display:none" onchange="Inventory.handleImageUpload(event)"/>
+      </section>
+
+    </main>
+    <footer class="app-footer">SmartStock Pro v1.0 — Sistem Manajemen Inventaris &bull; PT Maju Bersama Digital &bull; Mini Project BNSP Web Developer &copy; 2025</footer>
+  </div>
+</div>
+
+<!-- ========== MODALS ========== -->
+<!-- Add/Edit Product Modal -->
+<div class="modal-overlay" id="modal-product"><div class="modal" style="max-width:700px">
+  <div class="modal-header"><h2 class="modal-title" id="modal-product-title">Tambah Produk</h2>
+    <button class="modal-close" onclick="App.closeModal('modal-product')">✕</button></div>
+  <div class="modal-body"><form id="form-product" onsubmit="return Inventory.saveProduct(event)">
+    <input type="hidden" id="prod-id"/>
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">SKU <span class="req">*</span></label>
+        <input class="form-input" id="prod-sku" required placeholder="Contoh: EL-001"/></div>
+      <div class="form-group"><label class="form-label">Nama Produk <span class="req">*</span></label>
+        <input class="form-input" id="prod-name" required placeholder="Nama produk"/></div>
+      <div class="form-group"><label class="form-label">Kategori <span class="req">*</span></label>
+        <select class="form-select" id="prod-category" required></select></div>
+      <div class="form-group"><label class="form-label">Gudang <span class="req">*</span></label>
+        <select class="form-select" id="prod-warehouse" required></select></div>
+      <div class="form-group"><label class="form-label">Stok <span class="req">*</span></label>
+        <input class="form-input" type="number" id="prod-stock" min="0" required placeholder="0"/></div>
+      <div class="form-group"><label class="form-label">Minimum Stok</label>
+        <input class="form-input" type="number" id="prod-min-stock" min="0" placeholder="10"/></div>
+      <div class="form-group"><label class="form-label">Harga (Rp) <span class="req">*</span></label>
+        <input class="form-input" type="number" id="prod-price" min="0" required placeholder="0"/></div>
+      <div class="form-group"><label class="form-label">Supplier</label>
+        <select class="form-select" id="prod-supplier"></select></div>
+      <div class="form-group full"><label class="form-label">Deskripsi</label>
+        <textarea class="form-textarea" id="prod-desc" placeholder="Deskripsi produk..."></textarea></div>
+    </div>
+    <div class="form-actions"><button type="button" class="btn btn-secondary" onclick="App.closeModal('modal-product')">Batal</button>
+      <button type="submit" class="btn btn-primary">💾 Simpan</button></div>
+  </form></div>
+</div></div>
+
+<!-- Add/Edit Category Modal -->
+<div class="modal-overlay" id="modal-category"><div class="modal" style="max-width:480px">
+  <div class="modal-header"><h2 class="modal-title" id="modal-category-title">Tambah Kategori</h2>
+    <button class="modal-close" onclick="App.closeModal('modal-category')">✕</button></div>
+  <div class="modal-body"><form id="form-category" onsubmit="return Inventory.saveCategory(event)">
+    <input type="hidden" id="cat-id"/>
+    <div class="form-group mb-md"><label class="form-label">Nama Kategori <span class="req">*</span></label>
+      <input class="form-input" id="cat-name" required placeholder="Nama kategori"/></div>
+    <div class="form-group"><label class="form-label">Deskripsi</label>
+      <textarea class="form-textarea" id="cat-desc" placeholder="Deskripsi kategori..."></textarea></div>
+    <div class="form-actions"><button type="button" class="btn btn-secondary" onclick="App.closeModal('modal-category')">Batal</button>
+      <button type="submit" class="btn btn-primary">💾 Simpan</button></div>
+  </form></div>
+</div></div>
+
+<!-- Add/Edit Supplier Modal -->
+<div class="modal-overlay" id="modal-supplier"><div class="modal" style="max-width:500px">
+  <div class="modal-header"><h2 class="modal-title" id="modal-supplier-title">Tambah Supplier</h2>
+    <button class="modal-close" onclick="App.closeModal('modal-supplier')">✕</button></div>
+  <div class="modal-body"><form id="form-supplier" onsubmit="return Inventory.saveSupplier(event)">
+    <input type="hidden" id="sup-id"/>
+    <div class="form-group mb-md"><label class="form-label">Nama Supplier <span class="req">*</span></label>
+      <input class="form-input" id="sup-name" required placeholder="Nama perusahaan supplier"/></div>
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">Kontak</label>
+        <input class="form-input" id="sup-contact" placeholder="Nama kontak"/></div>
+      <div class="form-group"><label class="form-label">Telepon</label>
+        <input class="form-input" id="sup-phone" placeholder="08xxxxxxxxxx"/></div>
+      <div class="form-group"><label class="form-label">Email</label>
+        <input class="form-input" type="email" id="sup-email" placeholder="email@supplier.com"/></div>
+      <div class="form-group"><label class="form-label">Kota</label>
+        <input class="form-input" id="sup-city" placeholder="Kota"/></div>
+    </div>
+    <div class="form-actions"><button type="button" class="btn btn-secondary" onclick="App.closeModal('modal-supplier')">Batal</button>
+      <button type="submit" class="btn btn-primary">💾 Simpan</button></div>
+  </form></div>
+</div></div>
+
+<!-- Add Transaction Modal -->
+<div class="modal-overlay" id="modal-transaction"><div class="modal" style="max-width:500px">
+  <div class="modal-header"><h2 class="modal-title" id="modal-tx-title">Tambah Transaksi Masuk</h2>
+    <button class="modal-close" onclick="App.closeModal('modal-transaction')">✕</button></div>
+  <div class="modal-body"><form id="form-transaction" onsubmit="return Inventory.saveTransaction(event)">
+    <input type="hidden" id="tx-type" value="in"/>
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">Produk <span class="req">*</span></label>
+        <select class="form-select" id="tx-product" required></select></div>
+      <div class="form-group"><label class="form-label">Gudang <span class="req">*</span></label>
+        <select class="form-select" id="tx-warehouse" required></select></div>
+      <div class="form-group"><label class="form-label">Jumlah <span class="req">*</span></label>
+        <input class="form-input" type="number" id="tx-qty" min="1" required placeholder="Jumlah unit"/></div>
+      <div class="form-group"><label class="form-label">Tanggal</label>
+        <input class="form-input" type="date" id="tx-date"/></div>
+      <div class="form-group full"><label class="form-label">Keterangan</label>
+        <input class="form-input" id="tx-note" placeholder="Catatan transaksi"/></div>
+    </div>
+    <div class="form-actions"><button type="button" class="btn btn-secondary" onclick="App.closeModal('modal-transaction')">Batal</button>
+      <button type="submit" class="btn btn-primary">💾 Simpan Transaksi</button></div>
+  </form></div>
+</div></div>
+
+<!-- Delete Confirm Modal -->
+<div class="modal-overlay" id="modal-delete"><div class="modal" style="max-width:400px">
+  <div class="modal-header"><h2 class="modal-title">Konfirmasi Hapus</h2>
+    <button class="modal-close" onclick="App.closeModal('modal-delete')">✕</button></div>
+  <div class="modal-body"><div class="delete-confirm"><div class="delete-icon-wrap">🗑️</div>
+    <h3>Hapus Data?</h3><p id="delete-msg">Data ini akan dihapus secara permanen.</p></div></div>
+  <div class="modal-footer"><button class="btn btn-secondary" onclick="App.closeModal('modal-delete')">Batal</button>
+    <button class="btn btn-danger" id="btn-confirm-delete">🗑️ Ya, Hapus</button></div>
+</div></div>
+
+<!-- Image Preview Modal -->
+<div class="modal-overlay" id="modal-image"><div class="modal" style="max-width:600px">
+  <div class="modal-header"><h2 class="modal-title" id="modal-image-title">Preview Gambar</h2>
+    <button class="modal-close" onclick="App.closeModal('modal-image')">✕</button></div>
+  <div class="modal-body text-center"><img id="modal-image-preview" style="max-width:100%;border-radius:var(--r-md)"/></div>
+</div></div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- CDN Libraries -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+<!-- Application Scripts -->
+<script src="js/utils.js"></script>
+<script src="js/data.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/notifications.js"></script>
+<script src="js/monitoring.js"></script>
+<script src="js/dashboard.js"></script>
+<script src="js/inventory.js"></script>
+<script src="js/transfer.js"></script>
+<script src="js/reports.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

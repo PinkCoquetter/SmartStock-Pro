@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <meta name="description" content="SmartStock Pro — Sistem Manajemen Inventaris PT Maju Bersama Digital"/>
+  <title>Login — SmartStock Pro</title>
+  <link rel="stylesheet" href="css/style.css"/>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%233b82f6'/><text x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='bold' font-size='12'>SS</text></svg>"/>
+</head>
+<body>
+  <div class="login-page">
+    <div class="login-card">
+      <div class="login-logo">
+        <img src="assets/logo.svg" alt="SmartStock Pro Logo"/>
+        <div class="login-logo-text">
+          <h1>SmartStock Pro</h1>
+          <p>Inventory Management System</p>
+        </div>
+      </div>
+      <div class="login-title">
+        <h2>Selamat Datang</h2>
+        <p>Masuk ke akun Anda untuk melanjutkan</p>
+      </div>
+      <form class="login-form" id="login-form" onsubmit="return handleLogin(event)">
+        <div class="form-group">
+          <label class="form-label" for="login-user">Username <span class="req">*</span></label>
+          <input class="form-input" type="text" id="login-user" placeholder="Masukkan username" required autocomplete="username"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="login-pass">Password <span class="req">*</span></label>
+          <input class="form-input" type="password" id="login-pass" placeholder="Masukkan password" required autocomplete="current-password"/>
+        </div>
+        <div>
+          <label class="form-label">Pilih Role</label>
+          <div class="login-roles">
+            <div class="role-option">
+              <input type="radio" name="role" id="role-admin" value="admin" checked/>
+              <label for="role-admin"><span class="role-icon">👑</span>Admin</label>
+            </div>
+            <div class="role-option">
+              <input type="radio" name="role" id="role-manager" value="manager"/>
+              <label for="role-manager"><span class="role-icon">📊</span>Manajer Gudang</label>
+            </div>
+            <div class="role-option">
+              <input type="radio" name="role" id="role-staff" value="staff"/>
+              <label for="role-staff"><span class="role-icon">📦</span>Staf Gudang</label>
+            </div>
+            <div class="role-option">
+              <input type="radio" name="role" id="role-viewer" value="viewer"/>
+              <label for="role-viewer"><span class="role-icon">👁️</span>Viewer</label>
+            </div>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary w-full" style="justify-content:center;padding:.7rem">
+          🔐 Masuk ke Sistem
+        </button>
+      </form>
+      <div class="demo-accounts">
+        <h4>Akun Demo</h4>
+        <div class="demo-list">
+          <div class="demo-item" onclick="fillDemo('admin','admin123','admin')"><span>Admin</span><span>admin / admin123</span></div>
+          <div class="demo-item" onclick="fillDemo('manager','manager123','manager')"><span>Manajer Gudang</span><span>manager / manager123</span></div>
+          <div class="demo-item" onclick="fillDemo('staff','staff123','staff')"><span>Staf Gudang</span><span>staff / staff123</span></div>
+          <div class="demo-item" onclick="fillDemo('viewer','viewer123','viewer')"><span>Viewer</span><span>viewer / viewer123</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    // Demo accounts — simulasi autentikasi multi-level
+    const ACCOUNTS={
+      admin:{pass:'admin123',role:'admin',name:'Administrator',hash:'a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3'},
+      manager:{pass:'manager123',role:'manager',name:'Manajer Gudang Jakarta',hash:'ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f'},
+      staff:{pass:'staff123',role:'staff',name:'Staf Gudang',hash:'b0412597dcea813655c3f9eaac9b64fe6a38e6401f7ee4f10fe19c738e8f38c3'},
+      viewer:{pass:'viewer123',role:'viewer',name:'Viewer',hash:'d0e6cd0b981a63d93c6df1f83c0c8bfcec7f1e2e3f3e3e0ce5c8d9c8e8c7b6a5'}
+    };
+
+    // Simulasi password hashing menggunakan Web Crypto API (SHA-256)
+    async function hashPassword(password){
+      const encoder=new TextEncoder();
+      const data=encoder.encode(password);
+      const hashBuffer=await crypto.subtle.digest('SHA-256',data);
+      const hashArray=Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b=>b.toString(16).padStart(2,'0')).join('');
+    }
+
+    function fillDemo(user,pass,role){
+      document.getElementById('login-user').value=user;
+      document.getElementById('login-pass').value=pass;
+      document.getElementById('role-'+role).checked=true;
+    }
+
+    async function handleLogin(e){
+      e.preventDefault();
+      const user=document.getElementById('login-user').value.trim().toLowerCase();
+      const pass=document.getElementById('login-pass').value;
+      const role=document.querySelector('input[name="role"]:checked').value;
+      const account=ACCOUNTS[user];
+
+      if(!account||account.pass!==pass){
+        alert('Username atau password salah!');
+        console.warn('[AUTH] Login gagal:',user);
+        return false;
+      }
+
+      // Hash password untuk demo keamanan
+      const hashed=await hashPassword(pass);
+      console.log('[AUTH] Password hash (SHA-256):',hashed);
+
+      // Validasi kekuatan password
+      const strength=pass.length>=8?'Kuat':pass.length>=6?'Sedang':'Lemah';
+      console.log('[AUTH] Kekuatan password:',strength);
+
+      // Simpan session
+      const session={
+        user:user,
+        role:account.role,
+        name:account.name,
+        loginTime:new Date().toISOString(),
+        sessionId:'sess_'+Date.now().toString(36),
+        expiresAt:new Date(Date.now()+15*60*1000).toISOString() // 15 menit timeout
+      };
+      sessionStorage.setItem('ssp_session',JSON.stringify(session));
+
+      // Catat audit log
+      const auditLog=JSON.parse(localStorage.getItem('ssp_audit')||'[]');
+      auditLog.push({
+        id:'aud_'+Date.now(),
+        user:user,
+        role:account.role,
+        action:'LOGIN',
+        detail:'Login berhasil ke sistem',
+        timestamp:new Date().toISOString(),
+        ip:'192.168.1.'+Math.floor(Math.random()*254+1)
+      });
+      localStorage.setItem('ssp_audit',JSON.stringify(auditLog));
+
+      console.log('[AUTH] Login berhasil:',user,'| Role:',account.role);
+      console.log('[AUTH] Session ID:',session.sessionId);
+
+      // Redirect ke halaman utama
+      window.location.href='app.html';
+      return false;
+    }
+
+    // Check existing session
+    (function(){
+      const session=JSON.parse(sessionStorage.getItem('ssp_session')||'null');
+      if(session&&new Date(session.expiresAt)>new Date()){
+        window.location.href='app.html';
+      }
+    })();
+  </script>
+</body>
+</html>
