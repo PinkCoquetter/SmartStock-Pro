@@ -4,7 +4,7 @@
 ![Platform](https://img.shields.io/badge/Platform-Web%20SPA-blue)
 ![Tech Stack](https://img.shields.io/badge/Tech-HTML5%20%7C%20CSS3%20%7C%20Vanilla%20JS-orange)
 
-**SmartStock Pro** adalah purwarupa (prototype) Sistem Manajemen Inventaris yang dibangun khusus sebagai portofolio penyelesaian studi kasus **Sertifikasi BNSP Skema Web Developer**. Aplikasi ini dirancang untuk mendemonstrasikan penguasaan 22 Unit Kompetensi SKKNI melalui pendekatan antarmuka modern (Single Page Application).
+Aplikasi ini dirancang untuk mendemonstrasikan penguasaan 22 Unit Kompetensi SKKNI melalui pendekatan antarmuka modern (Single Page Application).
 
 Sistem ini mensimulasikan manajemen stok terpadu untuk 5 lokasi gudang (Jakarta, Surabaya, Bandung, Medan, Makassar) milik "PT Maju Bersama Digital".
 
