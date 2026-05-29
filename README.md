@@ -97,8 +97,3 @@ Untuk mematuhi standar 22 Unit Kompetensi yang diujikan, telah disediakan dokume
 9. [Dokumentasi API RESTful (Simulasi)](docs/api_documentation.md)
 10. [Buku Manual Troubleshooting](docs/troubleshooting.md)
 11. [FAQ Umum](docs/faq.md)
-
----
-
-**© 2025 - Calon Web Developer Profesional** 
-*Dibuat khusus untuk keperluan Uji Kompetensi Sertifikasi BNSP Web Developer.*
